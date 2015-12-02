@@ -55,8 +55,14 @@ namespace Python.Runtime {
             PyObject tb_module = PythonEngine.ImportModule("traceback");
             Runtime.Incref(_pyTB);
             using (PyObject pyTB = new PyObject(_pyTB)) {
-                _tb = tb_module.InvokeMethod("format_tb", pyTB).ToString();
-            }
+                    _tb = "";
+                    PyList tbList = new PyList(tb_module.InvokeMethod("format_tb", pyTB));
+                    foreach (PyObject item in tbList)
+                    {
+                        PyString s = new PyString(item);
+                        _tb += s.ToString(); 
+                    }                   
+                }
         }
         PythonEngine.ReleaseLock(gs);
     }

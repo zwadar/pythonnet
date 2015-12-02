@@ -393,8 +393,8 @@ namespace Python.Runtime {
         /// execute the code in and return a module of the given name.
         /// </remarks>
 
-        public static PyObject ModuleFromString(string name, string code) {
-            IntPtr c = Runtime.Py_CompileString(code, "none", (IntPtr)257);
+        public static PyObject ModuleFromString(string name, string code, string file_name = "none") {
+            IntPtr c = Runtime.Py_CompileString(code, file_name, (IntPtr)257);
             if (c == IntPtr.Zero) {
                 throw new PythonException();
             }
@@ -456,14 +456,17 @@ namespace Python.Runtime {
         public class GILState : IDisposable
         {
             private IntPtr state;
+            private IntPtr thread_state;
             internal GILState()
             {
+                thread_state = PythonEngine.BeginAllowThreads();
                 state = PythonEngine.AcquireLock();
             }
             public void Dispose()
             {
                 PythonEngine.ReleaseLock(state);
                 GC.SuppressFinalize(this);
+                PythonEngine.EndAllowThreads(thread_state);
             }
             ~GILState()
             {

@@ -11,6 +11,7 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace Python.Runtime {
 
@@ -441,10 +442,47 @@ namespace Python.Runtime {
             }
             return new PyObject(result);
         }
+
+        public static IntPtr NewInterpreter()
+        {
+            return Runtime.Py_NewInterpreter();
+        }
+
+        public static void EndInterpeter(IntPtr ptr)
+        {
+            Runtime.Py_EndInterpreter(ptr);
+        }
+
+        public static void SwapThreadState(IntPtr ptr)
+        {
+            Runtime.PyThreadState_Swap(ptr);
+        }
+
+        public static IntPtr GetThreadState()
+        {
+            return Runtime.PyThreadState_Get();
+        }
+
+        public static void AddToPath(string path)
+        {
+            IntPtr sys_path = Python.Runtime.Runtime.PySys_GetObject("path");
+            IntPtr item = Runtime.PyString_FromString(path);
+            Runtime.PyList_Append(sys_path, item);
+            Runtime.Decref(item);
+        }
+
     }
 
     public static class Py
     {
+        public static GILInterpeterState GILInterpreter()
+        {
+            if (!PythonEngine.IsInitialized)
+                PythonEngine.Initialize();
+
+            return new GILInterpeterState();
+        }
+
         public static GILState GIL()
         {
             if (!PythonEngine.IsInitialized)
@@ -469,6 +507,42 @@ namespace Python.Runtime {
                 PythonEngine.EndAllowThreads(thread_state);
             }
             ~GILState()
+            {
+                Dispose();
+            }
+        }
+
+        public class GILInterpeterState : IDisposable
+        {
+            private IntPtr state;
+            private IntPtr interpreter;
+            private IntPtr PyCLRMetaType;
+            internal GILInterpeterState()
+            {
+                interpreter = Runtime.Py_NewInterpreter();
+                state = PythonEngine.AcquireLock();
+                
+                PyCLRMetaType = MetaType.Initialize();
+                Exceptions.Initialize();
+                ImportHook.Initialize();
+
+                // Need to add the runtime directory to sys.path so that we
+                // can find built-in assemblies like System.Data, et. al.
+                string rtdir = RuntimeEnvironment.GetRuntimeDirectory();
+                IntPtr path = Runtime.PySys_GetObject("path");
+                IntPtr item = Runtime.PyString_FromString(rtdir);
+                Runtime.PyList_Append(path, item);
+                Runtime.Decref(item);
+            }
+            public void Dispose()
+            {
+                Exceptions.Shutdown();
+                ImportHook.Shutdown();
+                PythonEngine.ReleaseLock(state);
+                GC.SuppressFinalize(this);
+                Runtime.Py_EndInterpreter(interpreter);
+            }
+            ~GILInterpeterState()
             {
                 Dispose();
             }

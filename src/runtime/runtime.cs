@@ -871,16 +871,30 @@ namespace Python.Runtime {
     internal unsafe static extern IntPtr
     PyMethod_New(IntPtr func, IntPtr self, IntPtr cls);
 
-
     //====================================================================
-    // Python abstract object API
+    // Python File API
     //====================================================================
+    [DllImport(Runtime.dll, CallingConvention = CallingConvention.Cdecl,
+          ExactSpelling = true, CharSet = CharSet.Ansi)]
+    internal unsafe static extern IntPtr
+    PyFile_FromString(string name, string mode);
 
-    // A macro-like method to get the type of a Python object. This is
-    // designed to be lean and mean in IL & avoid managed <-> unmanaged
-    // transitions. Note that this does not incref the type object.
+    [DllImport(Runtime.dll, CallingConvention = CallingConvention.Cdecl,
+            ExactSpelling = true, CharSet = CharSet.Ansi)]
+    internal unsafe static extern IntPtr
+    PyFile_AsFile(IntPtr pyFile);
 
-    internal unsafe static IntPtr
+
+
+        //====================================================================
+        // Python abstract object API
+        //====================================================================
+
+        // A macro-like method to get the type of a Python object. This is
+        // designed to be lean and mean in IL & avoid managed <-> unmanaged
+        // transitions. Note that this does not incref the type object.
+
+        internal unsafe static IntPtr
     PyObject_TYPE(IntPtr op) {
         void* p = (void*)op;
         if ((void*)0 == p) {

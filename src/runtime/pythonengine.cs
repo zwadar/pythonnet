@@ -536,6 +536,11 @@ namespace Python.Runtime {
             }
             public void Dispose()
             {
+                // manually calling exit functions for subintepreter
+                String str = @"
+import sys
+sys.exitfunc()";
+                Runtime.PyRun_SimpleString(str);
                 Exceptions.Shutdown();
                 ImportHook.Shutdown();
                 PythonEngine.ReleaseLock(state);
